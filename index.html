@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Estoque & Compras</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231E1E1E%22/><text x=%2250%22 y=%2268%22 font-size=%2250%22 text-anchor=%22middle%22>🛒</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231E1E1E%22/><text x=%2250%22 y=%2268%22 font-size=%2250%22 text-anchor=%22middle%22>🛒</text></svg>">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Estoque">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="toast-container"></div>
+    <div id="modal-confirm" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div id="modal-text">Mensagem</div>
+            <div class="modal-buttons">
+                <button id="modal-btn-cancel" onclick="fecharModal(); darFeedback()">Cancelar</button>
+                <button id="modal-btn-confirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-container">
+        <h1 id="titulo-pagina">CONTROLE ESTOQUE</h1>
+        <button class="btn-theme" onclick="alternarTema()">🌓</button>
+    </div>
+
+    <div class="card">
+        <div class="search-container">
+            <div style="position: relative; flex: 1;">
+                <input type="text" id="filtroBusca" placeholder="🔍 Buscar..." oninput="filtrarGeral()" style="padding-right: 25px;">
+                <span class="btn-limpar" onclick="limparCampo('filtroBusca')">✖</span>
+            </div>
+            <select id="filtroSelect" style="max-width: 100px;" onchange="filtrarGeral()">
+                <option value="">📂 ITENS</option>
+            </select>
+        </div>
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 10px 0;">
+        <div class="input-group">
+            <div style="position: relative;">
+                <label>Produto</label>
+                <input type="text" id="novoProduto" placeholder="Item" oninput="autoPreencherUnidade()" style="padding-right: 25px;">
+                <span class="btn-limpar" onclick="limparCampo('novoProduto')">✖</span>
+            </div>
+            <div style="position: relative;">
+                <label>Qtd</label>
+                <input type="text" id="novoQtd" placeholder="1/2" onblur="calcularMath(this)" ondblclick="duploCliqueQtd(this)" style="padding-right: 25px;">
+                <span class="btn-limpar" onclick="limparCampo('novoQtd')">✖</span>
+            </div>
+            <div>
+                <label>Unid</label>
+                <select id="novoUnidade">
+                    <option value="kg">kg</option><option value="g">g</option><option value="uni">uni</option>
+                    <option value="pct">pct</option><option value="cx">cx</option><option value="bld">bld</option><option value="crt">crt</option>
+                </select>
+            </div>
+            
+            <div class="action-group">
+                <button id="add-btn" class="btn-half" onclick="adicionarManual(false)">Adicionar</button>
+                <button id="add-star-btn" class="btn-half" onclick="adicionarManual(true)">⭐ Fixar</button>
+                <button id="remove-star-btn" class="btn-half" onclick="removerDoPadrao()">🗑️ Padrão</button>
+            </div>
+
+        </div>
+        <div id="status-save">Salvo.</div>
+    </div>
+
+    <button id="btn-toggle-lista" onclick="alternarLista()">🔽 Ocultar Lista de Estoque</button>
+
+    <table id="tabela-estoque">
+        <thead>
+            <tr>
+                <th class="col-check">🛒</th><th class="col-desc">Descrição</th><th class="col-qtd">Qtd</th><th class="col-unid">Unid</th><th class="col-del"></th>
+            </tr>
+        </thead>
+        <tbody id="lista-itens"></tbody>
+    </table>
+
+    <div class="share-group" style="margin-bottom: 20px;">
+        <button class="btn-zap" onclick="darFeedback(); compartilharEstoque()">Enviar Estoque</button>
+        <button id="btn-copiar" class="btn-zap" onclick="copiarEstoque()">Copiar Estoque</button>
+    </div>
+
+    <div id="area-compras">
+        <h2 id="titulo-compras">LISTA DE COMPRAS</h2>
+        <ul id="lista-compras-visual"></ul>
+        <div class="share-group">
+            <button class="btn-compra" onclick="darFeedback(); compartilharComprasZap()">WhatsApp Compras</button>
+            <button class="btn-compra" onclick="copiarCompras()">Copiar Compras</button>
+        </div>
+    </div>
+
+    <button id="btn-novo-dia" onclick="iniciarNovoDia()">☀ INICIAR NOVO DIA (ZERAR QTD)</button>
+    <button id="btn-exportar" onclick="salvarListaNoCelular()">💾 SALVAR LISTA NO CELULAR</button>
+    <button id="btn-importar" onclick="darFeedback(); document.getElementById('input-arquivo').click()">📂 CARREGAR LISTA DO CELULAR</button>
+    <button id="btn-reset" onclick="resetarTudo()">⚠ RESTAURAR LISTA PADRÃO</button>
+    <input type="file" id="input-arquivo" accept=".json" style="display: none;" onchange="carregarListaDoCelular(event)">
+
+    <div class="nav-float">
+        <button class="btn-nav" onclick="darFeedback(); window.scrollTo(0,0)">▲</button>
+        <button class="btn-nav" onclick="darFeedback(); window.scrollTo(0, document.body.scrollHeight)">▼</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
