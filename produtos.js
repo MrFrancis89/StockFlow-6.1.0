@@ -1,5 +1,4 @@
-// LISTA INTEGRAL DE 43 PRODUTOS V4.7
-const produtosPadrao = [
+var produtosPadrao = [
     "4 queijos|kg", "Açúcar|kg", "Alho frito|pct", "Azeitona|uni", "Bacon|kg", 
     "Banana|kg", "Batata palha|pct", "Caixa|uni", "Calabresa|kg", "Canela|pct", 
     "Carne|kg", "Cebola|kg", "Cheddar|uni", "Chocolate branco|kg", "Chocolate preto|kg", 
