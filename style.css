@@ -196,21 +196,22 @@ body.light-mode #titulo-compras { border-bottom: 1px solid #E5E7EB; }
 #btn-exportar { background-color: var(--btn-blue); color: white; border: none; width: 100%; margin-top: 15px; padding: 16px; font-size: 12px; letter-spacing: 0.5px; border-radius: 10px; }
 #btn-importar { background-color: var(--btn-purple); color: white; border: none; width: 100%; margin-top: 15px; padding: 16px; font-size: 12px; letter-spacing: 0.5px; border-radius: 10px; }
 
+/* FIX VISIBILIDADE: Botão Restaurar Lista agora é preto e vermelho vibrante */
 #btn-reset { 
-    background: transparent !important; 
-    color: var(--accent) !important; 
-    border: 1px solid var(--border) !important; 
+    background-color: #000000 !important; 
+    color: var(--btn-danger) !important; 
+    border: 2px solid var(--btn-danger) !important; 
     width: 100%; 
     margin-top: 30px; 
     font-size: 11px; 
     padding: 15px; 
     border-radius: 12px;
     letter-spacing: 1px;
-    opacity: 0.8 !important;
-    font-weight: 600;
+    opacity: 1 !important;
+    font-weight: 800;
     transition: all 0.3s;
 }
-#btn-reset:hover { opacity: 1 !important; border-color: var(--btn-danger) !important; color: var(--btn-danger) !important; }
+#btn-reset:hover { background-color: var(--btn-danger) !important; color: white !important; }
 
 .nav-float { position: fixed; right: 15px; bottom: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
 .btn-nav { width: 45px; height: 45px; border-radius: 50%; background-color: var(--card); color: var(--accent); border: 1px solid var(--border); font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); padding: 0;}
