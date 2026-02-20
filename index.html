@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Estoque V4.7 Modular</title>
+    <title>Estoque V5.0 (Professional Dark)</title>
+    
     <link rel="icon" href="icone.png" type="image/png">
     <link rel="apple-touch-icon" href="icone.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Estoque">
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div id="toast-container"></div>
-    
     <div id="modal-confirm" class="modal-overlay" style="display:none;">
         <div class="modal-box">
             <div id="modal-text">Mensagem</div>
@@ -53,23 +56,38 @@
         </div>
     </div>
 
-    <div id="assistive-touch" onclick="toggleSearch(event)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <div id="assistive-touch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
     </div>
 
     <div id="search-overlay">
         <div class="search-inner">
             <div style="position: relative; flex: 1;">
-                <input type="text" id="filtroBusca" placeholder="🔍 Buscar..." oninput="filtrarGeral()">
-                <button class="btn-mic" onclick="toggleMic('busca', event)" id="btn-mic-busca">🎤</button>
+                <input type="text" id="filtroBusca" placeholder="🔍 Buscar..." oninput="filtrarGeral()" style="padding-right: 55px;">
+                <button class="btn-mic" onclick="toggleMic('busca', event)" id="btn-mic-busca">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
                 <span class="btn-limpar" onclick="limparCampo('filtroBusca')">✖</span>
             </div>
-            <select id="filtroSelect" onchange="filtrarGeral()"><option value="">📂 ITENS</option></select>
+            <select id="filtroSelect" style="max-width: 100px;" onchange="filtrarGeral()">
+                <option value="">📂 ITENS</option>
+            </select>
         </div>
     </div>
 
     <div class="header-container">
-        <h1>ESTOQUE & CATEGORIAS</h1>
+        <h1 id="titulo-pagina">
+            <span class="titulo-estoque" style="font-weight: 400; letter-spacing: 1px; color: #cccccc;">ESTOQUE</span> 
+            <span style="color: var(--btn-danger); font-weight: 900; margin-left: 4px;">V5.0</span>
+        </h1>
         <button class="btn-theme" onclick="alternarTema()">🌓</button>
     </div>
 
@@ -77,13 +95,20 @@
         <div class="input-group">
             <div style="position: relative;">
                 <label>Produto</label>
-                <input type="text" id="novoProduto" placeholder="Item" oninput="autoPreencherUnidade()">
-                <button class="btn-mic" onclick="toggleMic('produto', event)" id="btn-mic-prod">🎤</button>
+                <input type="text" id="novoProduto" placeholder="Item" oninput="autoPreencherUnidade()" style="padding-right: 55px;">
+                <button class="btn-mic" onclick="toggleMic('produto', event)" id="btn-mic-prod">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
                 <span class="btn-limpar" onclick="limparCampo('novoProduto')">✖</span>
             </div>
             <div style="position: relative;">
                 <label>Qtd</label>
-                <input type="text" id="novoQtd" placeholder="Qtd" onclick="abrirCalculadora(this)" readonly>
+                <input type="text" id="novoQtd" placeholder="Qtd" onclick="abrirCalculadora(this)" readonly style="padding-right: 25px; cursor: pointer;">
                 <span class="btn-limpar" onclick="limparCampo('novoQtd')">✖</span>
             </div>
             <div>
@@ -93,6 +118,7 @@
                     <option value="pct">pct</option><option value="cx">cx</option><option value="bld">bld</option><option value="crt">crt</option>
                 </select>
             </div>
+            
             <div class="action-group">
                 <button id="add-btn" class="btn-half" onclick="adicionarManual(false)">Adicionar</button>
                 <button id="add-star-btn" class="btn-half" onclick="adicionarManual(true)">⭐ Fixar</button>
@@ -107,12 +133,19 @@
     <div class="table-wrapper">
         <div id="swipe-bg">Apagar</div>
         <table id="tabela-estoque">
-            <thead><tr><th class="col-check"><input type="checkbox" id="check-todos" onchange="alternarTodos(this)"></th><th class="col-desc">Descrição</th><th class="col-qtd">Qtd</th><th class="col-unid">Unid</th></tr></thead>
+            <thead>
+                <tr>
+                    <th class="col-check"><input type="checkbox" id="check-todos" onchange="alternarTodos(this)"></th>
+                    <th class="col-desc">Descrição</th>
+                    <th class="col-qtd">Qtd</th>
+                    <th class="col-unid">Unid</th>
+                </tr>
+            </thead>
             <tbody id="lista-itens-container"></tbody>
         </table>
     </div>
 
-    <div class="share-group">
+    <div class="share-group" style="margin-bottom: 20px;">
         <button class="btn-zap" onclick="darFeedback(); compartilharEstoque()">Enviar Estoque</button>
         <button id="btn-copiar" class="btn-zap" onclick="copiarEstoque()">Copiar Estoque</button>
     </div>
@@ -126,16 +159,15 @@
         </div>
     </div>
 
-    <button id="btn-novo-dia" onclick="iniciarNovoDia()">☀ INICIAR NOVO DIA</button>
-    <button id="btn-exportar" onclick="salvarListaNoCelular()">💾 SALVAR NO CELULAR</button>
-    <button id="btn-importar" onclick="darFeedback(); document.getElementById('input-arquivo').click()">📂 CARREGAR LISTA</button>
+    <button id="btn-novo-dia" onclick="iniciarNovoDia()">☀ INICIAR NOVO DIA (ZERAR QTD)</button>
+    <button id="btn-exportar" onclick="salvarListaNoCelular()">💾 SALVAR LISTA NO CELULAR</button>
+    <button id="btn-importar" onclick="darFeedback(); document.getElementById('input-arquivo').click()">📂 CARREGAR LISTA DO CELULAR</button>
     <button id="btn-reset" onclick="resetarTudo()">⚠ RESTAURAR LISTA PADRÃO</button>
-    
     <input type="file" id="input-arquivo" accept=".json" style="display: none;" onchange="carregarListaDoCelular(event)">
 
     <div class="nav-float">
         <button class="btn-nav" onclick="darFeedback(); window.scrollTo(0,0)">▲</button>
-        <button class="btn-nav" onclick="darFeedback(); window.scrollTo(0, 9999)">▼</button>
+        <button class="btn-nav" onclick="darFeedback(); window.scrollTo(0, document.body.scrollHeight)">▼</button>
     </div>
 
     <script src="produtos.js"></script>
