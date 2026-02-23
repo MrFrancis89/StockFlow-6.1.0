@@ -927,9 +927,14 @@ function ativarModoTeclado(input) {
     input.focus();
 
     let parent = input.parentNode;
+    // Garante que o pai tenha position relative para o ícone
+    if (window.getComputedStyle(parent).position === 'static') {
+        parent.style.position = 'relative';
+    }
     if (!parent.classList.contains('input-com-calc')) {
         parent.classList.add('input-com-calc');
     }
+    // Remove ícone antigo se houver
     let oldIcon = parent.querySelector('.btn-calc-revert');
     if (oldIcon) oldIcon.remove();
 
@@ -943,6 +948,8 @@ function ativarModoTeclado(input) {
         input.classList.remove('modo-teclado');
         icon.remove();
         parent.classList.remove('input-com-calc');
+        // Restaura position se foi alterada
+        parent.style.position = '';
         abrirCalculadora(input);
     });
     parent.appendChild(icon);
@@ -1058,10 +1065,14 @@ function configurarEventListeners() {
         btn.addEventListener('click', fecharModalAlerta);
     });
 
-    document.getElementById('calc-btn-teclado').addEventListener('click', () => {
+    // Botão "Usar teclado" na calculadora - CORRIGIDO
+    document.getElementById('calc-btn-teclado').addEventListener('click', function(e) {
+        e.stopPropagation(); // Evita que o clique feche o modal
         if (inputCalculadoraAtual) {
             fecharCalculadora();
             ativarModoTeclado(inputCalculadoraAtual);
+        } else {
+            mostrarToast("Clique em um campo de quantidade primeiro.");
         }
     });
 
