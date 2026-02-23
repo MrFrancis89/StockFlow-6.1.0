@@ -1,4 +1,67 @@
-// v5.2.4 - Lista padrão restaurada, swipe com botões de cores exatas, unidade configurável nos alertas
+// v6.0.0 - StockFlow Pro com versionamento dinâmico e novidades automáticas
+// Changelog:
+// - Navegação por abas (Estoque/Compras)
+// - Versão dinâmica no título (lida da constante VERSAO_ATUAL)
+// - Exibição automática de "O que há de novo" quando a versão muda
+// - Notas de atualização baseadas no CHANGELOG.md (incorporadas no código)
+
+const VERSAO_ATUAL = "v6.0.0";
+
+// ===== NOVIDADES POR VERSÃO (extraídas do CHANGELOG) =====
+const releaseNotes = {
+    "v6.0.0": `✨ **StockFlow Pro v6.0.0**
+
+- Navegação por abas: Estoque e Compras.
+- Interface reorganizada seguindo novo design.
+- Sistema de novidades automáticas ao atualizar.
+- Versão dinâmica exibida no título.`,
+    "v5.3.1": `🔧 **v5.3.1**
+
+- Dica de swipe na primeira execução.
+- Tooltips nos botões Fixar e Ocultar.
+- Acessibilidade nos botões de swipe.`,
+    "v5.3.0": `🚀 **v5.3.0**
+
+- Lista categorizada automaticamente.
+- Swipe para apagar/configurar alertas.
+- Calculadora integrada.
+- Reconhecimento de voz.
+- Tema claro/escuro.
+- Exportação/importação JSON.`
+};
+
+// ===== VERIFICAÇÃO DE NOVIDADES =====
+function verificarNovidades() {
+    const ultimaVersaoVista = localStorage.getItem('stockflow_ultima_versao');
+    if (ultimaVersaoVista !== VERSAO_ATUAL) {
+        // Se há notas para esta versão, exibe o modal
+        if (releaseNotes[VERSAO_ATUAL]) {
+            mostrarNovidades(releaseNotes[VERSAO_ATUAL]);
+        }
+        localStorage.setItem('stockflow_ultima_versao', VERSAO_ATUAL);
+    }
+}
+
+function mostrarNovidades(texto) {
+    const modal = document.getElementById('modal-whatsnew');
+    const content = document.getElementById('whatsnew-content');
+    content.innerText = texto; // ou innerHTML se quiser formatação
+    modal.style.display = 'flex';
+}
+
+// Fechar modal de novidades
+document.querySelectorAll('.fechar-whatsnew').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('modal-whatsnew').style.display = 'none';
+    });
+});
+
+// ===== ATUALIZA TÍTULO COM VERSÃO =====
+function atualizarTituloPrincipal() {
+    const titulo = document.getElementById('titulo-principal');
+    titulo.innerHTML = `StockFlow Pro <span style="color: var(--btn-danger); font-size: 12px; margin-left: 5px;">${VERSAO_ATUAL}</span>`;
+}
+
 let audioCtx = null;
 let inputCalculadoraAtual = null;
 let expressaoCalc = "";
@@ -111,7 +174,6 @@ window.addEventListener('load', initSpeech);
 function toggleSearch(event) {
     if (event) event.stopPropagation(); darFeedback();
     const overlay = document.getElementById('search-overlay');
-    const btn = document.getElementById('assistive-touch');
     if (overlay.style.display === 'block') {
         overlay.style.display = 'none';
     } else {
@@ -259,13 +321,22 @@ assistiveTouch.addEventListener('click', (e) => {
 // ===== SWIPE COM DOIS BOTÕES =====
 let swipeStartX = 0, swipeStartY = 0, swipeCurrentX = 0;
 let isSwiping = false, swipedRow = null, justSwiped = false;
-const swipeActions = document.getElementById('swipe-actions');
-const swipeDeleteBtn = document.querySelector('.swipe-delete');
-const swipeAlertBtn = document.querySelector('.swipe-alert');
+const swipeBg = document.getElementById("swipe-bg");
+const swipeWidth = 160; // largura total dos dois botões
+
+// Prepara o swipe-bg para receber dois botões com acessibilidade
+swipeBg.innerHTML = `
+    <button class="swipe-btn swipe-btn-excluir" aria-label="Apagar item">🗑️ Apagar</button>
+    <button class="swipe-btn swipe-btn-alerta" aria-label="Configurar alerta">🔔 Alerta</button>
+`;
+swipeBg.style.width = swipeWidth + 'px';
+swipeBg.style.display = 'none';
+swipeBg.style.flexDirection = 'row';
+swipeBg.style.alignItems = 'stretch';
+swipeBg.style.padding = '0';
 
 function initSwipe() {
     const container = document.getElementById("lista-itens-container");
-
     function getClientX(e) { return e.touches ? e.touches[0].clientX : e.clientX; }
     function getClientY(e) { return e.touches ? e.touches[0].clientY : e.clientY; }
 
@@ -273,36 +344,37 @@ function initSwipe() {
         let tr = e.target.closest('tr');
         if (!tr || tr.classList.contains('categoria-header-row')) return;
         if (e.target.tagName === 'INPUT' && e.target.type === 'checkbox') return;
-
         if (swipedRow && swipedRow !== tr) closeSwipe(swipedRow);
-
+        
         swipeStartX = getClientX(e);
         swipeStartY = getClientY(e);
         isSwiping = false;
         justSwiped = false;
-        swipeCurrentX = (swipedRow === tr) ? -160 : 0;
+        swipeCurrentX = (swipedRow === tr) ? -swipeWidth : 0;
         tr.style.transition = 'none';
     }, { passive: true });
 
     container.addEventListener('touchmove', function(e) {
         let tr = e.target.closest('tr');
         if (!tr || tr.classList.contains('categoria-header-row')) return;
-
         let deltaX = getClientX(e) - swipeStartX;
         let deltaY = getClientY(e) - swipeStartY;
-
         if (!isSwiping && Math.abs(deltaX) > 15 && Math.abs(deltaX) > Math.abs(deltaY)) {
             isSwiping = true;
         }
-
         if (isSwiping) {
             if (e.cancelable) e.preventDefault();
             if (document.activeElement) document.activeElement.blur();
             justSwiped = true;
-
+            
+            // Posiciona o swipe-bg na mesma linha
+            swipeBg.style.display = 'flex';
+            swipeBg.style.top = tr.offsetTop + 'px';
+            swipeBg.style.height = tr.offsetHeight + 'px';
+            
             let moveX = swipeCurrentX + deltaX;
             if (moveX > 0) moveX = 0;
-            if (moveX < -160) moveX = -160;
+            if (moveX < -swipeWidth) moveX = -swipeWidth;
             tr.style.transform = `translateX(${moveX}px)`;
         }
     }, { passive: false });
@@ -310,15 +382,12 @@ function initSwipe() {
     container.addEventListener('touchend', function(e) {
         let tr = e.target.closest('tr');
         if (!tr || tr.classList.contains('categoria-header-row')) return;
-
         if (isSwiping) {
             let deltaX = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX) - swipeStartX;
             let finalX = swipeCurrentX + deltaX;
-
             tr.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
-
             if (finalX < -40) {
-                tr.style.transform = `translateX(-160px)`;
+                tr.style.transform = `translateX(-${swipeWidth}px)`;
                 swipedRow = tr;
             } else {
                 closeSwipe(tr);
@@ -330,7 +399,7 @@ function initSwipe() {
     });
 
     document.addEventListener('touchstart', function(e) {
-        if (swipedRow && !swipedRow.contains(e.target) && e.target.id !== 'swipe-actions') {
+        if (swipedRow && !swipedRow.contains(e.target) && e.target.id !== 'swipe-bg' && !e.target.closest('.swipe-btn')) {
             closeSwipe(swipedRow);
         }
     }, { passive: true });
@@ -342,60 +411,75 @@ function closeSwipe(tr) {
         tr.style.transform = `translateX(0px)`;
     }
     setTimeout(() => {
-        if (swipedRow === tr) {
-            swipedRow = null;
+        if (!swipedRow || swipedRow === tr) {
+            swipeBg.style.display = 'none';
+            if (swipedRow === tr) swipedRow = null;
         }
     }, 300);
 }
 
-// Handlers dos botões de swipe
-if (swipeDeleteBtn) {
-    swipeDeleteBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (!swipedRow) return;
-        mostrarConfirmacao("Deseja realmente remover este item?", () => {
-            swipedRow.remove();
-            salvarDados();
-            atualizarDropdown();
-            mostrarToast("Removido 🗑️");
-            closeSwipe(swipedRow);
-        });
-    });
-}
-
-if (swipeAlertBtn) {
-    swipeAlertBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (!swipedRow) return;
-        abrirModalAlertaParaLinha(swipedRow);
+function removerLinhaSwipe() {
+    if (!swipedRow) return;
+    mostrarConfirmacao("Deseja realmente remover este item?", () => {
+        swipedRow.remove();
+        salvarDados();
+        atualizarDropdown();
+        mostrarToast("Removido 🗑️");
         closeSwipe(swipedRow);
     });
 }
 
+function abrirModalAlertaSwipe() {
+    if (!swipedRow) return;
+    abrirModalAlerta(swipedRow);
+    closeSwipe(swipedRow);
+}
+
+function abrirCalculadora(inputElement) { if (justSwiped || swipedRow) return; darFeedback(); inputElement.blur(); inputCalculadoraAtual = inputElement; let tituloCalc = "🧮 Calculadora"; if (inputElement.id === "novoQtd") { let nomeNovo = document.getElementById("novoProduto").value.trim(); tituloCalc = nomeNovo ? "🧮 " + nomeNovo : "🧮 NOVO ITEM"; } else { let linha = inputElement.closest("tr"); if (linha) { let nomeTabela = linha.querySelector(".nome-prod").innerText.trim(); tituloCalc = "🧮 " + nomeTabela; } } document.getElementById("calc-title").innerText = tituloCalc; let val = inputElement.value.replace(',', '.').trim(); expressaoCalc = val || ""; atualizarDisplayCalc(); document.getElementById('modal-calc').style.display = 'flex'; }
+function fecharCalculadora() { darFeedback(); document.getElementById('modal-calc').style.display = 'none'; inputCalculadoraAtual = null; }
+function calcDigito(digito) { darFeedback(); if (digito === 'C') { expressaoCalc = ""; } else if (digito === 'BACK') { expressaoCalc = expressaoCalc.slice(0, -1); } else { if (digito === ',') digito = '.'; expressaoCalc += digito; } atualizarDisplayCalc(); }
+function atualizarDisplayCalc() { let display = document.getElementById('calc-display'); display.innerText = expressaoCalc.replace(/\./g, ',') || "0"; }
+function calcSalvar() { darFeedback(); try { let expr = expressaoCalc.replace(/×/g, '*').replace(/÷/g, '/'); expr = expr.replace(/[^0-9+\-*/.]/g, ''); if (expr) { let resultado = Function('"use strict";return (' + expr + ')')(); if (!isFinite(resultado)) throw new Error("Erro"); resultado = Math.round(resultado * 100) / 100; inputCalculadoraAtual.value = resultado.toString().replace('.', ','); } else { inputCalculadoraAtual.value = ""; } salvarDados(); fecharCalculadora(); mostrarToast("Quantidade Salva ✅"); verificarAlertas(); } catch (e) { document.getElementById('calc-display').innerText = "Erro"; setTimeout(atualizarDisplayCalc, 1000); } }
+
+function limparCampo(idCaixaTexto) { darFeedback(); document.getElementById(idCaixaTexto).value = ''; document.getElementById(idCaixaTexto).focus(); if (idCaixaTexto === 'filtroBusca') { filtrarGeral(); } }
+function alternarLista() { darFeedback(); var tabelaWrapper = document.querySelector(".table-wrapper"); var btnToggle = document.getElementById("btn-toggle-lista"); if (tabelaWrapper.style.display === "none") { tabelaWrapper.style.display = "block"; btnToggle.innerHTML = "🔽 Ocultar Lista de Estoque"; } else { tabelaWrapper.style.display = "none"; btnToggle.innerHTML = "▶️ Mostrar Lista de Estoque"; } }
+function alternarTema() { darFeedback(); document.body.classList.toggle('light-mode'); localStorage.setItem('temaEstoque', document.body.classList.contains('light-mode') ? 'claro' : 'escuro'); }
+
+let acaoConfirmacao = null;
+function mostrarToast(msg) { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = 'toast'; toast.innerText = msg; container.appendChild(toast); setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000); }
+function mostrarConfirmacao(msg, callback, tipoBotao = 'perigo') { darFeedback(); document.getElementById('modal-text').innerText = msg; const btnCancel = document.getElementById('modal-btn-cancel'); const btnConfirm = document.getElementById('modal-btn-confirm'); btnCancel.style.display = 'block'; btnCancel.innerText = 'Cancelar'; btnConfirm.style.display = 'block'; btnConfirm.innerText = 'Confirmar'; btnConfirm.style.backgroundColor = (tipoBotao === 'sucesso') ? 'var(--btn-green)' : 'var(--btn-red)'; document.getElementById('modal-confirm').style.display = 'flex'; acaoConfirmacao = callback; }
+function mostrarAlertaElegante(msg) { darFeedback(); document.getElementById('modal-text').innerText = msg; const btnCancel = document.getElementById('modal-btn-cancel'); const btnConfirm = document.getElementById('modal-btn-confirm'); btnCancel.style.display = 'none'; btnConfirm.style.display = 'block'; btnConfirm.innerText = 'OK'; btnConfirm.style.backgroundColor = 'var(--btn-blue)'; document.getElementById('modal-confirm').style.display = 'flex'; acaoConfirmacao = null; }
+function fecharModal() { document.getElementById('modal-confirm').style.display = 'none'; acaoConfirmacao = null; }
+document.getElementById('modal-btn-confirm').addEventListener('click', () => { darFeedback(); if(acaoConfirmacao) acaoConfirmacao(); fecharModal(); });
+document.getElementById('modal-btn-cancel').addEventListener('click', () => { darFeedback(); fecharModal(); });
+
+function obterDataAtual() { return new Date().toLocaleDateString('pt-BR'); }
+function obterDataAmanha() { let hoje = new Date(); let amanha = new Date(hoje); amanha.setDate(hoje.getDate() + 1); return amanha.toLocaleDateString('pt-BR'); }
+
+function atualizarTitulos() { 
+    document.getElementById("titulo-compras").innerText = "LISTA " + obterDataAmanha(); 
+}
+
+var storageKey = "estoqueDados_v4_categorias"; var storageOcultos = "itensOcultosPadrao_v4"; var storageMeus = "meusItensPadrao_v4";
+
+var containerItens = document.getElementById("lista-itens-container"); var selectFiltro = document.getElementById("filtroSelect"); var buscaInput = document.getElementById("filtroBusca"); var areaCompras = document.getElementById("area-compras"); var ulCompras = document.getElementById("lista-compras-visual");
+
 // ===== FUNÇÕES DE ALERTA =====
 let itemAlertaAtual = null;
 
-function abrirModalAlertaParaLinha(tr) {
+function abrirModalAlerta(elemento) {
+    let tr;
+    if (elemento.tagName === 'TR') {
+        tr = elemento;
+    } else {
+        tr = elemento.closest('tr');
+    }
+    if (!tr) return;
     itemAlertaAtual = tr;
     let min = tr.dataset.min ? parseFloat(tr.dataset.min) : '';
     let max = tr.dataset.max ? parseFloat(tr.dataset.max) : '';
-    let minUnidade = tr.dataset.minUnidade || '';
-    let maxUnidade = tr.dataset.maxUnidade || '';
-
     document.getElementById('alerta-min').value = min !== '' ? min : '';
     document.getElementById('alerta-max').value = max !== '' ? max : '';
-
-    // Se não houver unidade salva, usar a unidade atual do produto
-    let unidadeSelect = tr.querySelector('.select-tabela');
-    let unidadeAtual = unidadeSelect ? unidadeSelect.value : 'kg';
-
-    let selectMin = document.getElementById('alerta-min-unidade');
-    let selectMax = document.getElementById('alerta-max-unidade');
-
-    // Preencher selects com as unidades salvas ou a atual
-    selectMin.value = minUnidade || unidadeAtual;
-    selectMax.value = maxUnidade || unidadeAtual;
-
     document.getElementById('modal-alerta').style.display = 'flex';
 }
 
@@ -406,100 +490,56 @@ function fecharModalAlerta() {
 
 function salvarAlerta() {
     if (!itemAlertaAtual) return;
-
     let min = document.getElementById('alerta-min').value;
     let max = document.getElementById('alerta-max').value;
-    let minUnidade = document.getElementById('alerta-min-unidade').value;
-    let maxUnidade = document.getElementById('alerta-max-unidade').value;
-
     min = min ? parseFloat(min) : null;
     max = max ? parseFloat(max) : null;
 
     itemAlertaAtual.dataset.min = min !== null ? min : '';
     itemAlertaAtual.dataset.max = max !== null ? max : '';
-    itemAlertaAtual.dataset.minUnidade = minUnidade || '';
-    itemAlertaAtual.dataset.maxUnidade = maxUnidade || '';
 
     salvarDados();
     verificarAlertas();
     fecharModalAlerta();
 }
 
-// Função auxiliar para converter valores entre unidades (kg ↔ g)
-function converterParaUnidade(valor, deUnidade, paraUnidade) {
-    if (deUnidade === paraUnidade) return valor;
-    if (deUnidade === 'kg' && paraUnidade === 'g') return valor * 1000;
-    if (deUnidade === 'g' && paraUnidade === 'kg') return valor / 1000;
-    // Para outras unidades, assume-se 1:1 (não há conversão)
-    return valor;
-}
-
 function verificarAlertas() {
     let dados = JSON.parse(localStorage.getItem(storageKey) || "[]");
     dados.forEach(item => {
-        // Quantidade atual do produto (convertida para número)
-        let qtdStr = (item.q || '').replace(',', '.').replace(/[^\d.-]/g, '');
-        let qtdAtual = parseFloat(qtdStr) || 0;
-        let unidadeAtual = item.u || 'kg';
-
-        // Verifica alerta mínimo
-        if (item.min !== null && item.min !== undefined && item.min > 0) {
-            let minValor = item.min;
-            let minUnidade = item.minUnidade || unidadeAtual;
-            // Converte a quantidade atual para a unidade do alerta mínimo
-            let qtdConvertida = converterParaUnidade(qtdAtual, unidadeAtual, minUnidade);
-            if (qtdConvertida < minValor && qtdAtual > 0) {
-                mostrarToast(`⚠️ Estoque baixo: ${item.n}`);
-                // Marca o checkbox automaticamente
-                document.querySelectorAll("#lista-itens-container tr:not(.categoria-header-row)").forEach(r => {
-                    let nome = r.querySelector('.nome-prod').innerText.trim();
-                    if (nome === item.n) {
-                        let chk = r.querySelector('input[type="checkbox"]');
-                        if (!chk.checked) {
-                            chk.checked = true;
-                            alternarCheck(chk);
-                        }
+        let qtd = parseFloat((item.q || '').replace(',', '.')) || 0;
+        if (item.min !== null && item.min !== undefined && qtd < item.min) {
+            mostrarToast(`⚠️ Estoque baixo: ${item.n}`);
+            document.querySelectorAll("#lista-itens-container tr:not(.categoria-header-row)").forEach(r => {
+                let nome = r.querySelector('.nome-prod').innerText.trim();
+                if (nome === item.n) {
+                    let chk = r.querySelector('input[type="checkbox"]');
+                    if (!chk.checked) {
+                        chk.checked = true;
+                        alternarCheck(chk);
                     }
-                });
-            }
+                }
+            });
         }
-
-        // Verifica alerta máximo
-        if (item.max !== null && item.max !== undefined && item.max > 0) {
-            let maxValor = item.max;
-            let maxUnidade = item.maxUnidade || unidadeAtual;
-            let qtdConvertida = converterParaUnidade(qtdAtual, unidadeAtual, maxUnidade);
-            if (qtdConvertida > maxValor) {
-                mostrarToast(`📦 Estoque excessivo: ${item.n}`);
-            }
+        if (item.max !== null && item.max !== undefined && qtd > item.max) {
+            mostrarToast(`📦 Estoque excessivo: ${item.n}`);
         }
     });
 }
 
 // ===== FUNÇÕES PRINCIPAIS =====
-var storageKey = "estoqueDados_v4_categorias"; 
-var storageOcultos = "itensOcultosPadrao_v4"; 
-var storageMeus = "meusItensPadrao_v4";
-
-var containerItens = document.getElementById("lista-itens-container"); 
-var selectFiltro = document.getElementById("filtroSelect"); 
-var buscaInput = document.getElementById("filtroBusca"); 
-var areaCompras = document.getElementById("area-compras"); 
-var ulCompras = document.getElementById("lista-compras-visual");
-
 function carregarListaPadrao() { 
     var listaCombinada = []; 
     var ocultosSistema = JSON.parse(localStorage.getItem(storageOcultos) || "[]"); 
     produtosPadrao.forEach(p => { 
         var d = p.split("|"); 
         if (!ocultosSistema.includes(d[0].toLowerCase())) { 
-            listaCombinada.push({ n: d[0], q: "", u: d[1], c: false, min: null, max: null, minUnidade: null, maxUnidade: null }); 
+            listaCombinada.push({ n: d[0], q: "", u: d[1], c: false, min: null, max: null }); 
         } 
     }); 
     var favoritosUsuario = JSON.parse(localStorage.getItem(storageMeus) || "[]"); 
     favoritosUsuario.forEach(item => { 
         if(!listaCombinada.some(i => i.n.toLowerCase() === item.n.toLowerCase())) { 
-            listaCombinada.push({ n: item.n, q: "", u: item.u, c: false, min: null, max: null, minUnidade: null, maxUnidade: null }); 
+            listaCombinada.push({ n: item.n, q: "", u: item.u, c: false, min: null, max: null }); 
         } 
     }); 
     renderizarListaCompleta(listaCombinada); 
@@ -523,39 +563,33 @@ function renderizarListaCompleta(dados) {
             trHeader.innerHTML = `<td colspan="4" class="categoria-header" style="background-color: ${coresCategorias[cat]}">${nomesCategorias[cat]}</td>`; 
             containerItens.appendChild(trHeader); 
             grupos[cat].forEach(item => { 
-                inserirLinhaNoDOM(item.n, item.q, item.u, item.c, item.min, item.max, item.minUnidade, item.maxUnidade); 
+                inserirLinhaNoDOM(item.n, item.q, item.u, item.c, item.min, item.max); 
             }); 
         } 
     } 
 }
 
-function inserirLinhaNoDOM(n, q, u, chk, min, max, minUnidade, maxUnidade) { 
+function inserirLinhaNoDOM(n, q, u, chk, min, max) { 
     var tr = document.createElement("tr"); 
     if(chk) tr.classList.add("linha-marcada");
     tr.dataset.min = min !== null && min !== undefined ? min : '';
     tr.dataset.max = max !== null && max !== undefined ? max : '';
-    tr.dataset.minUnidade = minUnidade || '';
-    tr.dataset.maxUnidade = maxUnidade || '';
     
     tr.innerHTML = `
-        <td class="col-check"><input type="checkbox" onchange="alternarCheck(this)" ${chk ? 'checked' : ''}></td>
+        <td class="col-check"><input type="checkbox" ${chk ? 'checked' : ''}></td>
         <td class="col-desc">
-            <span contenteditable="true" class="nome-prod" onblur="salvarEAtualizar()">${n}</span>
+            <span contenteditable="true" class="nome-prod">${n}</span>
         </td>
-        <td class="col-qtd"><input type="text" class="input-qtd-tabela" value="${q}" onclick="abrirCalculadora(this)" readonly></td>
-        <td class="col-unid">
-            <div>
-                <select class="select-tabela" onchange="salvarDados()">
-                    <option value="kg" ${u==='kg'?'selected':''}>kg</option>
-                    <option value="g" ${u==='g'?'selected':''}>g</option>
-                    <option value="uni" ${u==='uni'?'selected':''}>uni</option>
-                    <option value="pct" ${u==='pct'?'selected':''}>pct</option>
-                    <option value="cx" ${u==='cx'?'selected':''}>cx</option>
-                    <option value="bld" ${u==='bld'?'selected':''}>bld</option>
-                    <option value="crt" ${u==='crt'?'selected':''}>crt</option>
-                </select>
-            </div>
-        </td>
+        <td class="col-qtd"><input type="text" class="input-qtd-tabela" value="${q}" readonly></td>
+        <td class="col-unid"><select class="select-tabela">
+            <option value="kg" ${u==='kg'?'selected':''}>kg</option>
+            <option value="g" ${u==='g'?'selected':''}>g</option>
+            <option value="uni" ${u==='uni'?'selected':''}>uni</option>
+            <option value="pct" ${u==='pct'?'selected':''}>pct</option>
+            <option value="cx" ${u==='cx'?'selected':''}>cx</option>
+            <option value="bld" ${u==='bld'?'selected':''}>bld</option>
+            <option value="crt" ${u==='crt'?'selected':''}>crt</option>
+        </select></td>
     `;
     containerItens.appendChild(tr); 
 }
@@ -571,9 +605,7 @@ function salvarDados() {
             let chk = c[0].querySelector("input[type='checkbox']").checked; 
             let min = r.dataset.min ? parseFloat(r.dataset.min) : null; 
             let max = r.dataset.max ? parseFloat(r.dataset.max) : null; 
-            let minUnidade = r.dataset.minUnidade || null;
-            let maxUnidade = r.dataset.maxUnidade || null;
-            dados.push({ n: nome, q: qtd, u: unid, c: chk, min: min, max: max, minUnidade: minUnidade, maxUnidade: maxUnidade }); 
+            dados.push({ n: nome, q: qtd, u: unid, c: chk, min: min, max: max }); 
         } 
     }); 
     localStorage.setItem(storageKey, JSON.stringify(dados)); 
@@ -581,7 +613,6 @@ function salvarDados() {
     s.style.opacity = "1"; 
     setTimeout(() => s.style.opacity = "0", 1500); 
     atualizarPainelCompras(); 
-    verificarAlertas();
 }
 
 function salvarEAtualizar() { 
@@ -690,7 +721,7 @@ function adicionarManual(salvarNoPadrao) {
         return;
     }
 
-    dados.push({ n: p, q: q, u: u, c: false, min: null, max: null, minUnidade: null, maxUnidade: null }); 
+    dados.push({ n: p, q: q, u: u, c: false, min: null, max: null }); 
     renderizarListaCompleta(dados); 
     salvarDados(); 
     
@@ -770,34 +801,6 @@ function atualizarDropdown() {
     selectFiltro.value = v; 
 }
 
-function obterDataAtual() { return new Date().toLocaleDateString('pt-BR'); }
-function obterDataAmanha() { let hoje = new Date(); let amanha = new Date(hoje); amanha.setDate(hoje.getDate() + 1); return amanha.toLocaleDateString('pt-BR'); }
-
-function atualizarTitulos() { 
-    document.getElementById("titulo-pagina").innerHTML = `<span class="titulo-estoque" style="font-weight: 400; letter-spacing: 1px; color: #cccccc;">ESTOQUE</span> <span style="color: var(--btn-danger); font-weight: 900; margin-left: 4px;">V5.2</span>`; 
-    document.getElementById("titulo-compras").innerText = "LISTA " + obterDataAmanha(); 
-}
-
-// Toast e modais
-let acaoConfirmacao = null;
-function mostrarToast(msg) { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = 'toast'; toast.innerText = msg; container.appendChild(toast); setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000); }
-function mostrarConfirmacao(msg, callback, tipoBotao = 'perigo') { darFeedback(); document.getElementById('modal-text').innerText = msg; const btnCancel = document.getElementById('modal-btn-cancel'); const btnConfirm = document.getElementById('modal-btn-confirm'); btnCancel.style.display = 'block'; btnCancel.innerText = 'Cancelar'; btnConfirm.style.display = 'block'; btnConfirm.innerText = 'Confirmar'; btnConfirm.style.backgroundColor = (tipoBotao === 'sucesso') ? 'var(--btn-green)' : 'var(--btn-red)'; document.getElementById('modal-confirm').style.display = 'flex'; acaoConfirmacao = callback; }
-function mostrarAlertaElegante(msg) { darFeedback(); document.getElementById('modal-text').innerText = msg; const btnCancel = document.getElementById('modal-btn-cancel'); const btnConfirm = document.getElementById('modal-btn-confirm'); btnCancel.style.display = 'none'; btnConfirm.style.display = 'block'; btnConfirm.innerText = 'OK'; btnConfirm.style.backgroundColor = 'var(--btn-blue)'; document.getElementById('modal-confirm').style.display = 'flex'; acaoConfirmacao = null; }
-function fecharModal() { document.getElementById('modal-confirm').style.display = 'none'; acaoConfirmacao = null; }
-document.getElementById('modal-btn-confirm').addEventListener('click', () => { darFeedback(); if(acaoConfirmacao) acaoConfirmacao(); fecharModal(); });
-
-// Calculadora
-function abrirCalculadora(inputElement) { if (justSwiped || swipedRow) return; darFeedback(); inputElement.blur(); inputCalculadoraAtual = inputElement; let tituloCalc = "🧮 Calculadora"; if (inputElement.id === "novoQtd") { let nomeNovo = document.getElementById("novoProduto").value.trim(); tituloCalc = nomeNovo ? "🧮 " + nomeNovo : "🧮 NOVO ITEM"; } else { let linha = inputElement.closest("tr"); if (linha) { let nomeTabela = linha.querySelector(".nome-prod").innerText.trim(); tituloCalc = "🧮 " + nomeTabela; } } document.getElementById("calc-title").innerText = tituloCalc; let val = inputElement.value.replace(',', '.').trim(); expressaoCalc = val || ""; atualizarDisplayCalc(); document.getElementById('modal-calc').style.display = 'flex'; }
-function fecharCalculadora() { darFeedback(); document.getElementById('modal-calc').style.display = 'none'; inputCalculadoraAtual = null; }
-function calcDigito(digito) { darFeedback(); if (digito === 'C') { expressaoCalc = ""; } else if (digito === 'BACK') { expressaoCalc = expressaoCalc.slice(0, -1); } else { if (digito === ',') digito = '.'; expressaoCalc += digito; } atualizarDisplayCalc(); }
-function atualizarDisplayCalc() { let display = document.getElementById('calc-display'); display.innerText = expressaoCalc.replace(/\./g, ',') || "0"; }
-function calcSalvar() { darFeedback(); try { let expr = expressaoCalc.replace(/×/g, '*').replace(/÷/g, '/'); expr = expr.replace(/[^0-9+\-*/.]/g, ''); if (expr) { let resultado = Function('"use strict";return (' + expr + ')')(); if (!isFinite(resultado)) throw new Error("Erro"); resultado = Math.round(resultado * 100) / 100; inputCalculadoraAtual.value = resultado.toString().replace('.', ','); } else { inputCalculadoraAtual.value = ""; } salvarDados(); fecharCalculadora(); mostrarToast("Quantidade Salva ✅"); } catch (e) { document.getElementById('calc-display').innerText = "Erro"; setTimeout(atualizarDisplayCalc, 1000); } }
-
-// Outras funções utilitárias
-function limparCampo(idCaixaTexto) { darFeedback(); document.getElementById(idCaixaTexto).value = ''; document.getElementById(idCaixaTexto).focus(); if (idCaixaTexto === 'filtroBusca') { filtrarGeral(); } }
-function alternarLista() { darFeedback(); var tabelaWrapper = document.querySelector(".table-wrapper"); var btnToggle = document.getElementById("btn-toggle-lista"); if (tabelaWrapper.style.display === "none") { tabelaWrapper.style.display = "block"; btnToggle.innerHTML = "🔽 Ocultar Lista de Estoque"; } else { tabelaWrapper.style.display = "none"; btnToggle.innerHTML = "▶️ Mostrar Lista de Estoque"; } }
-function alternarTema() { darFeedback(); document.body.classList.toggle('light-mode'); localStorage.setItem('temaEstoque', document.body.classList.contains('light-mode') ? 'claro' : 'escuro'); }
-
 function resetarTudo() { 
     mostrarConfirmacao("ATENÇÃO: Restaurar lista de fábrica?", () => { 
         localStorage.removeItem(storageKey); 
@@ -826,7 +829,16 @@ function salvarListaNoCelular() {
     var url = URL.createObjectURL(blob); 
     var a = document.createElement("a"); 
     a.href = url; 
-    a.download = "ESTOQUE_CATEGORIAS.json"; 
+    
+    var data = new Date();
+    var dia = String(data.getDate()).padStart(2, '0');
+    var mes = String(data.getMonth() + 1).padStart(2, '0');
+    var ano = data.getFullYear();
+    var horas = String(data.getHours()).padStart(2, '0');
+    var minutos = String(data.getMinutes()).padStart(2, '0');
+    var nomeArquivo = `ESTOQUE_${dia}-${mes}-${ano}_${horas}h${minutos}.json`;
+    
+    a.download = nomeArquivo; 
     a.click(); 
 }
 
@@ -835,13 +847,10 @@ function carregarListaDoCelular(event) {
     var r = new FileReader(); 
     r.onload = function(e) { 
         let dados = JSON.parse(e.target.result);
-        // Garantir compatibilidade com dados antigos (sem minUnidade/maxUnidade)
         dados = dados.map(item => ({
             ...item,
             min: item.min !== undefined ? item.min : null,
-            max: item.max !== undefined ? item.max : null,
-            minUnidade: item.minUnidade !== undefined ? item.minUnidade : null,
-            maxUnidade: item.maxUnidade !== undefined ? item.maxUnidade : null
+            max: item.max !== undefined ? item.max : null
         }));
         localStorage.setItem(storageKey, JSON.stringify(dados)); 
         location.reload(); 
@@ -857,9 +866,137 @@ function autoPreencherUnidade() {
     } 
 }
 
+// ===== DICA DE SWIPE NA PRIMEIRA EXECUÇÃO =====
+function mostrarDicaSwipe() {
+    const dicaMostrada = localStorage.getItem('dicaSwipeMostrada');
+    if (!dicaMostrada) {
+        setTimeout(() => {
+            mostrarToast("👆 Deslize os itens para esquerda para apagar ou configurar alerta");
+            localStorage.setItem('dicaSwipeMostrada', 'true');
+        }, 1000);
+    }
+}
+
+// ===== NAVEGAÇÃO POR ABAS =====
+function iniciarNavegacao() {
+    const tabs = document.querySelectorAll('.nav-tab');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            contents.forEach(content => content.classList.remove('active'));
+            document.getElementById(target + '-section').classList.add('active');
+            darFeedback();
+        });
+    });
+}
+
+// ===== EVENT LISTENERS ADICIONAIS (para botões sem onclick no HTML) =====
+function configurarEventListeners() {
+    // Botões do cabeçalho
+    document.querySelector('.btn-theme').addEventListener('click', alternarTema);
+
+    // Botões de ação da calculadora
+    document.querySelectorAll('.calc-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const val = e.target.dataset.calc;
+            if (val === 'OK') calcSalvar();
+            else calcDigito(val);
+        });
+    });
+    document.querySelector('.calc-close').addEventListener('click', fecharCalculadora);
+
+    // Botões de limpar campo
+    document.querySelectorAll('.btn-limpar').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.dataset.limpar;
+            if (id) limparCampo(id);
+        });
+    });
+
+    // Botões de microfone
+    document.getElementById('btn-mic-prod').addEventListener('click', (e) => toggleMic('produto', e));
+    document.getElementById('btn-mic-busca').addEventListener('click', (e) => toggleMic('busca', e));
+
+    // Botões de adicionar/remover
+    document.getElementById('add-btn').addEventListener('click', () => adicionarManual(false));
+    document.getElementById('add-star-btn').addEventListener('click', () => adicionarManual(true));
+    document.getElementById('remove-star-btn').addEventListener('click', removerDoPadrao);
+
+    // Botão de alternar lista
+    document.getElementById('btn-toggle-lista').addEventListener('click', alternarLista);
+
+    // Botões de compartilhamento
+    document.getElementById('btn-compartilhar-estoque').addEventListener('click', () => { darFeedback(); compartilharEstoque(); });
+    document.getElementById('btn-copiar-estoque').addEventListener('click', copiarEstoque);
+    document.getElementById('btn-compartilhar-compras').addEventListener('click', () => { darFeedback(); compartilharComprasZap(); });
+    document.getElementById('btn-copiar-compras').addEventListener('click', copiarCompras);
+
+    // Botões de ações principais
+    document.getElementById('btn-novo-dia').addEventListener('click', iniciarNovoDia);
+    document.getElementById('btn-exportar').addEventListener('click', salvarListaNoCelular);
+    document.getElementById('btn-importar').addEventListener('click', () => { darFeedback(); document.getElementById('input-arquivo').click(); });
+    document.getElementById('btn-reset').addEventListener('click', resetarTudo);
+    document.getElementById('input-arquivo').addEventListener('change', carregarListaDoCelular);
+
+    // Checkbox "selecionar todos"
+    document.getElementById('check-todos').addEventListener('change', (e) => alternarTodos(e.target));
+
+    // Delegação de eventos para checkboxes da tabela (são criados dinamicamente)
+    document.getElementById('lista-itens-container').addEventListener('change', (e) => {
+        if (e.target.type === 'checkbox') alternarCheck(e.target);
+    });
+
+    // Delegação para edição de nome do produto
+    document.getElementById('lista-itens-container').addEventListener('blur', (e) => {
+        if (e.target.classList.contains('nome-prod')) salvarEAtualizar();
+    }, true);
+
+    // Delegação para selects de unidade na tabela
+    document.getElementById('lista-itens-container').addEventListener('change', (e) => {
+        if (e.target.classList.contains('select-tabela')) salvarDados();
+    });
+
+    // Delegação para abrir calculadora ao clicar no input de quantidade da tabela
+    document.getElementById('lista-itens-container').addEventListener('click', (e) => {
+        if (e.target.classList.contains('input-qtd-tabela')) abrirCalculadora(e.target);
+    });
+
+    // Input de busca
+    document.getElementById('filtroBusca').addEventListener('input', filtrarGeral);
+    document.getElementById('filtroSelect').addEventListener('change', filtrarGeral);
+
+    // Scroll flutuante
+    document.getElementById('btn-scroll-top').addEventListener('click', () => { darFeedback(); window.scrollTo(0,0); });
+    document.getElementById('btn-scroll-bottom').addEventListener('click', () => { darFeedback(); window.scrollTo(0, document.body.scrollHeight); });
+
+    // Swipe buttons (são inseridos dinamicamente, mas os listeners são globais via onclick)
+    // Como usamos onclick inline nos botões do swipe, não precisamos de listeners adicionais.
+
+    // Modal de alerta
+    document.getElementById('salvar-alerta').addEventListener('click', salvarAlerta);
+    document.querySelectorAll('.fechar-modal-alerta').forEach(btn => {
+        btn.addEventListener('click', fecharModalAlerta);
+    });
+
+    // Fechar modais ao clicar fora (opcional)
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-overlay')) {
+            if (e.target.id === 'modal-confirm') fecharModal();
+            if (e.target.id === 'modal-calc') fecharCalculadora();
+            if (e.target.id === 'modal-alerta') fecharModalAlerta();
+            if (e.target.id === 'modal-whatsnew') e.target.style.display = 'none';
+        }
+    });
+}
+
 // Inicialização
 function iniciarApp() { 
     if(localStorage.getItem('temaEstoque') === 'claro') { document.body.classList.add('light-mode'); } 
+    atualizarTituloPrincipal(); 
     atualizarTitulos(); 
     carregarPosicaoLupa(); 
     var salvos = localStorage.getItem(storageKey); 
@@ -871,7 +1008,11 @@ function iniciarApp() {
     atualizarDropdown(); 
     atualizarPainelCompras(); 
     initSwipe(); 
-    verificarAlertas();
+    verificarAlertas(); 
+    mostrarDicaSwipe();
+    iniciarNavegacao();
+    configurarEventListeners();
+    verificarNovidades();
 }
 
 iniciarApp();
