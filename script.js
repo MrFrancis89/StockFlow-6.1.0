@@ -1,20 +1,17 @@
-// v6.0.0 - StockFlow Pro com versionamento dinâmico e novidades automáticas
-// Changelog:
-// - Navegação por abas (Estoque/Compras)
-// - Versão dinâmica no título (lida da constante VERSAO_ATUAL)
-// - Exibição automática de "O que há de novo" quando a versão muda
-// - Notas de atualização baseadas no CHANGELOG.md (incorporadas no código)
-
+// v6.0.0 - StockFlow Pro com versionamento dinâmico, novidades, alternância calculadora/teclado e parser de frações
 const VERSAO_ATUAL = "v6.0.0";
 
-// ===== NOVIDADES POR VERSÃO (extraídas do CHANGELOG) =====
+// ===== NOVIDADES POR VERSÃO =====
 const releaseNotes = {
     "v6.0.0": `✨ **StockFlow Pro v6.0.0**
 
 - Navegação por abas: Estoque e Compras.
 - Interface reorganizada seguindo novo design.
 - Sistema de novidades automáticas ao atualizar.
-- Versão dinâmica exibida no título.`,
+- Versão dinâmica exibida no título.
+- Botão na calculadora para alternar para teclado.
+- Ícone de retorno à calculadora nos campos.
+- Parser de frações (ex: 1/2, 2 1/3 → decimal).`,
     "v5.3.1": `🔧 **v5.3.1**
 
 - Dica de swipe na primeira execução.
@@ -34,7 +31,6 @@ const releaseNotes = {
 function verificarNovidades() {
     const ultimaVersaoVista = localStorage.getItem('stockflow_ultima_versao');
     if (ultimaVersaoVista !== VERSAO_ATUAL) {
-        // Se há notas para esta versão, exibe o modal
         if (releaseNotes[VERSAO_ATUAL]) {
             mostrarNovidades(releaseNotes[VERSAO_ATUAL]);
         }
@@ -45,11 +41,10 @@ function verificarNovidades() {
 function mostrarNovidades(texto) {
     const modal = document.getElementById('modal-whatsnew');
     const content = document.getElementById('whatsnew-content');
-    content.innerText = texto; // ou innerHTML se quiser formatação
+    content.innerText = texto;
     modal.style.display = 'flex';
 }
 
-// Fechar modal de novidades
 document.querySelectorAll('.fechar-whatsnew').forEach(btn => {
     btn.addEventListener('click', () => {
         document.getElementById('modal-whatsnew').style.display = 'none';
@@ -322,9 +317,8 @@ assistiveTouch.addEventListener('click', (e) => {
 let swipeStartX = 0, swipeStartY = 0, swipeCurrentX = 0;
 let isSwiping = false, swipedRow = null, justSwiped = false;
 const swipeBg = document.getElementById("swipe-bg");
-const swipeWidth = 160; // largura total dos dois botões
+const swipeWidth = 160;
 
-// Prepara o swipe-bg para receber dois botões com acessibilidade
 swipeBg.innerHTML = `
     <button class="swipe-btn swipe-btn-excluir" aria-label="Apagar item">🗑️ Apagar</button>
     <button class="swipe-btn swipe-btn-alerta" aria-label="Configurar alerta">🔔 Alerta</button>
@@ -367,7 +361,6 @@ function initSwipe() {
             if (document.activeElement) document.activeElement.blur();
             justSwiped = true;
             
-            // Posiciona o swipe-bg na mesma linha
             swipeBg.style.display = 'flex';
             swipeBg.style.top = tr.offsetTop + 'px';
             swipeBg.style.height = tr.offsetHeight + 'px';
@@ -524,6 +517,55 @@ function verificarAlertas() {
             mostrarToast(`📦 Estoque excessivo: ${item.n}`);
         }
     });
+}
+
+// ===== PARSER DE FRAÇÕES =====
+function parseFractionToDecimal(str) {
+    if (!str) return '';
+    let s = str.trim().replace(',', '.');
+    
+    // Fração simples: "1/2"
+    let fractionMatch = s.match(/^(\d+)\/(\d+)$/);
+    if (fractionMatch) {
+        let num = parseInt(fractionMatch[1]);
+        let den = parseInt(fractionMatch[2]);
+        if (den === 0) {
+            mostrarToast("Denominador não pode ser zero.");
+            return str;
+        }
+        return (num / den).toString().replace('.', ',');
+    }
+    
+    // Número misto: "2 1/2"
+    let mixedMatch = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+    if (mixedMatch) {
+        let whole = parseInt(mixedMatch[1]);
+        let num = parseInt(mixedMatch[2]);
+        let den = parseInt(mixedMatch[3]);
+        if (den === 0) {
+            mostrarToast("Denominador não pode ser zero.");
+            return str;
+        }
+        return (whole + num / den).toString().replace('.', ',');
+    }
+    
+    // Decimal simples (já com ponto ou vírgula)
+    let num = parseFloat(s);
+    if (!isNaN(num)) {
+        return num.toString().replace('.', ',');
+    }
+    
+    mostrarToast("Formato inválido. Use números ou frações (ex: 1/2, 2 1/2)");
+    return str;
+}
+
+function parseAndUpdateQuantity(input) {
+    let original = input.value;
+    let parsed = parseFractionToDecimal(original);
+    if (parsed !== original) {
+        input.value = parsed;
+        salvarDados();
+    }
 }
 
 // ===== FUNÇÕES PRINCIPAIS =====
@@ -866,7 +908,7 @@ function autoPreencherUnidade() {
     } 
 }
 
-// ===== DICA DE SWIPE NA PRIMEIRA EXECUÇÃO =====
+// ===== DICA DE SWIPE =====
 function mostrarDicaSwipe() {
     const dicaMostrada = localStorage.getItem('dicaSwipeMostrada');
     if (!dicaMostrada) {
@@ -875,6 +917,35 @@ function mostrarDicaSwipe() {
             localStorage.setItem('dicaSwipeMostrada', 'true');
         }, 1000);
     }
+}
+
+// ===== FUNÇÕES DE ALTERNÂNCIA CALCULADORA/TECLADO =====
+function ativarModoTeclado(input) {
+    if (!input) return;
+    input.removeAttribute('readonly');
+    input.classList.add('modo-teclado');
+    input.focus();
+
+    let parent = input.parentNode;
+    if (!parent.classList.contains('input-com-calc')) {
+        parent.classList.add('input-com-calc');
+    }
+    let oldIcon = parent.querySelector('.btn-calc-revert');
+    if (oldIcon) oldIcon.remove();
+
+    let icon = document.createElement('span');
+    icon.className = 'btn-calc-revert';
+    icon.innerHTML = '🧮';
+    icon.setAttribute('title', 'Usar calculadora');
+    icon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        input.setAttribute('readonly', true);
+        input.classList.remove('modo-teclado');
+        icon.remove();
+        parent.classList.remove('input-com-calc');
+        abrirCalculadora(input);
+    });
+    parent.appendChild(icon);
 }
 
 // ===== NAVEGAÇÃO POR ABAS =====
@@ -894,12 +965,10 @@ function iniciarNavegacao() {
     });
 }
 
-// ===== EVENT LISTENERS ADICIONAIS (para botões sem onclick no HTML) =====
+// ===== EVENT LISTENERS =====
 function configurarEventListeners() {
-    // Botões do cabeçalho
     document.querySelector('.btn-theme').addEventListener('click', alternarTema);
 
-    // Botões de ação da calculadora
     document.querySelectorAll('.calc-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const val = e.target.dataset.calc;
@@ -909,7 +978,6 @@ function configurarEventListeners() {
     });
     document.querySelector('.calc-close').addEventListener('click', fecharCalculadora);
 
-    // Botões de limpar campo
     document.querySelectorAll('.btn-limpar').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const id = e.target.dataset.limpar;
@@ -917,72 +985,86 @@ function configurarEventListeners() {
         });
     });
 
-    // Botões de microfone
     document.getElementById('btn-mic-prod').addEventListener('click', (e) => toggleMic('produto', e));
     document.getElementById('btn-mic-busca').addEventListener('click', (e) => toggleMic('busca', e));
 
-    // Botões de adicionar/remover
     document.getElementById('add-btn').addEventListener('click', () => adicionarManual(false));
     document.getElementById('add-star-btn').addEventListener('click', () => adicionarManual(true));
     document.getElementById('remove-star-btn').addEventListener('click', removerDoPadrao);
 
-    // Botão de alternar lista
     document.getElementById('btn-toggle-lista').addEventListener('click', alternarLista);
 
-    // Botões de compartilhamento
     document.getElementById('btn-compartilhar-estoque').addEventListener('click', () => { darFeedback(); compartilharEstoque(); });
     document.getElementById('btn-copiar-estoque').addEventListener('click', copiarEstoque);
     document.getElementById('btn-compartilhar-compras').addEventListener('click', () => { darFeedback(); compartilharComprasZap(); });
     document.getElementById('btn-copiar-compras').addEventListener('click', copiarCompras);
 
-    // Botões de ações principais
     document.getElementById('btn-novo-dia').addEventListener('click', iniciarNovoDia);
     document.getElementById('btn-exportar').addEventListener('click', salvarListaNoCelular);
     document.getElementById('btn-importar').addEventListener('click', () => { darFeedback(); document.getElementById('input-arquivo').click(); });
     document.getElementById('btn-reset').addEventListener('click', resetarTudo);
     document.getElementById('input-arquivo').addEventListener('change', carregarListaDoCelular);
 
-    // Checkbox "selecionar todos"
     document.getElementById('check-todos').addEventListener('change', (e) => alternarTodos(e.target));
 
-    // Delegação de eventos para checkboxes da tabela (são criados dinamicamente)
     document.getElementById('lista-itens-container').addEventListener('change', (e) => {
         if (e.target.type === 'checkbox') alternarCheck(e.target);
     });
 
-    // Delegação para edição de nome do produto
     document.getElementById('lista-itens-container').addEventListener('blur', (e) => {
         if (e.target.classList.contains('nome-prod')) salvarEAtualizar();
+        if (e.target.classList.contains('input-qtd-tabela') && !e.target.hasAttribute('readonly')) {
+            parseAndUpdateQuantity(e.target);
+        }
     }, true);
 
-    // Delegação para selects de unidade na tabela
     document.getElementById('lista-itens-container').addEventListener('change', (e) => {
         if (e.target.classList.contains('select-tabela')) salvarDados();
     });
 
-    // Delegação para abrir calculadora ao clicar no input de quantidade da tabela
     document.getElementById('lista-itens-container').addEventListener('click', (e) => {
-        if (e.target.classList.contains('input-qtd-tabela')) abrirCalculadora(e.target);
+        if (e.target.classList.contains('input-qtd-tabela')) {
+            if (!e.target.hasAttribute('readonly')) return;
+            abrirCalculadora(e.target);
+        }
     });
 
-    // Input de busca
+    document.getElementById('novoQtd').addEventListener('click', (e) => {
+        if (!e.target.hasAttribute('readonly')) return;
+        abrirCalculadora(e.target);
+    });
+
+    document.getElementById('novoQtd').addEventListener('blur', (e) => {
+        if (!e.target.hasAttribute('readonly')) {
+            parseAndUpdateQuantity(e.target);
+        }
+    });
+
+    document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && (e.target.classList.contains('input-qtd-tabela') || e.target.id === 'novoQtd')) {
+            e.preventDefault();
+            e.target.blur();
+        }
+    });
+
     document.getElementById('filtroBusca').addEventListener('input', filtrarGeral);
     document.getElementById('filtroSelect').addEventListener('change', filtrarGeral);
 
-    // Scroll flutuante
     document.getElementById('btn-scroll-top').addEventListener('click', () => { darFeedback(); window.scrollTo(0,0); });
     document.getElementById('btn-scroll-bottom').addEventListener('click', () => { darFeedback(); window.scrollTo(0, document.body.scrollHeight); });
 
-    // Swipe buttons (são inseridos dinamicamente, mas os listeners são globais via onclick)
-    // Como usamos onclick inline nos botões do swipe, não precisamos de listeners adicionais.
-
-    // Modal de alerta
     document.getElementById('salvar-alerta').addEventListener('click', salvarAlerta);
     document.querySelectorAll('.fechar-modal-alerta').forEach(btn => {
         btn.addEventListener('click', fecharModalAlerta);
     });
 
-    // Fechar modais ao clicar fora (opcional)
+    document.getElementById('calc-btn-teclado').addEventListener('click', () => {
+        if (inputCalculadoraAtual) {
+            fecharCalculadora();
+            ativarModoTeclado(inputCalculadoraAtual);
+        }
+    });
+
     window.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal-overlay')) {
             if (e.target.id === 'modal-confirm') fecharModal();
