@@ -19,11 +19,14 @@ import { initSwipe } from './swipe.js';
 import { iniciarNavegacao } from './navegacao.js';
 import { alternarCheck, alternarTodos } from './eventos.js';
 
-// Constantes
-const VERSAO_ATUAL = "v6.1.0";
+const VERSAO_ATUAL = "v6.1.1";
 
-// Release notes
 const releaseNotes = {
+    "v6.1.1": `✨ **StockFlow Pro v6.1.1**
+
+- Correção: microfone agora é ativado corretamente no duplo toque da lupa.
+- Ajustes no temporizador do double tap para maior confiabilidade.
+- Pequenas melhorias de estabilidade.`,
     "v6.1.0": `✨ **StockFlow Pro v6.1.0**
 
 - Alternância entre calculadora e teclado nativo nos campos de quantidade.
@@ -51,7 +54,6 @@ const releaseNotes = {
 - Exportação/importação JSON.`
 };
 
-// ===== VERIFICAÇÃO DE NOVIDADES =====
 function verificarNovidades() {
     const ultimaVersaoVista = carregarUltimaVersao();
     if (ultimaVersaoVista !== VERSAO_ATUAL) {
@@ -69,7 +71,6 @@ function mostrarNovidades(texto) {
     modal.style.display = 'flex';
 }
 
-// ===== ATUALIZA TÍTULO COM VERSÃO =====
 function atualizarTituloPrincipal() {
     const titulo = document.getElementById('titulo-principal');
     titulo.innerHTML = `StockFlow Pro <span style="color: var(--btn-danger); font-size: 12px; margin-left: 5px;">${VERSAO_ATUAL}</span>`;
@@ -374,11 +375,20 @@ function initSpeech() {
 function toggleMic(campo, event) { 
     if(event) event.stopPropagation(); 
     darFeedback(); 
-    if (!recognition) { mostrarToast("Navegador sem suporte."); return; } 
-    if (isRecording) { recognition.stop(); } 
-    else { 
+    if (!recognition) { 
+        mostrarToast("Navegador sem suporte."); 
+        return; 
+    } 
+    if (isRecording) { 
+        recognition.stop(); 
+    } else { 
         activeField = campo; 
-        try { recognition.start(); } catch (e) { recognition.stop(); isRecording = false; } 
+        try { 
+            recognition.start(); 
+        } catch (e) { 
+            recognition.stop(); 
+            isRecording = false; 
+        } 
     } 
 }
 
@@ -404,15 +414,10 @@ function initLupa() {
         assistiveTouch.style.left = 'auto';
     }
 
-    // Touch events para arrastar
     assistiveTouch.addEventListener('touchstart', onTouchStart, { passive: false });
     assistiveTouch.addEventListener('touchmove', onTouchMove, { passive: false });
     assistiveTouch.addEventListener('touchend', onTouchEnd, { passive: false });
-
-    // Click para abrir busca (se não for drag)
     assistiveTouch.addEventListener('click', onClick);
-
-    // Double tap detection
     assistiveTouch.addEventListener('touchstart', onDoubleTapTouchStart);
     assistiveTouch.addEventListener('touchend', onDoubleTapTouchEnd);
 }
@@ -424,18 +429,8 @@ function onTouchStart(e) {
     startY = touch.clientY;
 
     const computedStyle = window.getComputedStyle(assistiveTouch);
-    if (computedStyle.left !== 'auto' && computedStyle.left !== '0px') {
-        initialLeft = parseFloat(computedStyle.left);
-    } else {
-        const rect = assistiveTouch.getBoundingClientRect();
-        initialLeft = rect.left;
-    }
-    if (computedStyle.top !== 'auto' && computedStyle.top !== '0px') {
-        initialTop = parseFloat(computedStyle.top);
-    } else {
-        const rect = assistiveTouch.getBoundingClientRect();
-        initialTop = rect.top;
-    }
+    initialLeft = parseFloat(computedStyle.left) || assistiveTouch.getBoundingClientRect().left;
+    initialTop = parseFloat(computedStyle.top) || assistiveTouch.getBoundingClientRect().top;
 
     isDragging = false;
 }
@@ -472,10 +467,7 @@ function onTouchMove(e) {
 function onTouchEnd(e) {
     if (isDragging) {
         e.preventDefault();
-        const pos = {
-            left: assistiveTouch.style.left,
-            top: assistiveTouch.style.top
-        };
+        const pos = { left: assistiveTouch.style.left, top: assistiveTouch.style.top };
         salvarPosicaoLupa(pos);
     }
     isDragging = false;
@@ -507,12 +499,14 @@ function onDoubleTapTouchEnd(e) {
     const currentTime = new Date().getTime();
     if (lastTap && (currentTime - lastTap) < 300) {
         clearTimeout(tapTimeout);
+        // Abre o overlay se necessário
         if (document.getElementById('search-overlay').style.display !== 'block') {
             toggleSearch(null);
         }
+        // Aguarda um pequeno intervalo para o overlay aparecer
         setTimeout(() => {
             toggleMic('busca', null);
-        }, 50);
+        }, 150);
         lastTap = 0;
     } else {
         tapTimeout = setTimeout(() => {
@@ -535,7 +529,6 @@ function toggleSearch(event) {
     }
 }
 
-// Fecha overlay ao clicar fora
 document.addEventListener('click', function(event) { 
     const overlay = document.getElementById('search-overlay'); 
     const btn = document.getElementById('assistive-touch'); 
@@ -544,7 +537,6 @@ document.addEventListener('click', function(event) {
     } 
 });
 
-// Ajusta posição do overlay ao rolar
 window.addEventListener('scroll', function() { 
     var overlay = document.getElementById('search-overlay'); 
     if (overlay.style.display === 'block') { 
@@ -672,10 +664,8 @@ function configurarEventListeners() {
         }
     });
 
-    // Configura listeners do modal de confirmação
     configurarListenersConfirm();
 
-    // Fechar modal de novidades ao clicar no X
     document.querySelectorAll('.fechar-whatsnew').forEach(btn => {
         btn.addEventListener('click', () => {
             document.getElementById('modal-whatsnew').style.display = 'none';
@@ -683,13 +673,11 @@ function configurarEventListeners() {
     });
 }
 
-// ===== INICIALIZAÇÃO =====
 function iniciarApp() {
     initSpeech();
     if (carregarTema() === 'claro') { document.body.classList.add('light-mode'); }
     atualizarTituloPrincipal();
     atualizarTitulos();
-
     initLupa();
 
     var salvos = carregarDados();
@@ -708,5 +696,4 @@ function iniciarApp() {
     verificarNovidades();
 }
 
-// Inicia o app
 iniciarApp();
