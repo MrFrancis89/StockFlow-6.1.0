@@ -4,6 +4,7 @@ import { salvarDados } from './storage.js';
 import { coletarDadosDaTabela } from './ui.js';
 import { abrirModalAlerta } from './alerta.js';
 import { mostrarToast } from './toast.js';
+import { atualizarPainelCompras } from './compras.js';
 
 let swipeStartX = 0, swipeStartY = 0, swipeCurrentX = 0;
 let isSwiping = false, swipedRow = null, justSwiped = false;
@@ -90,7 +91,6 @@ export function initSwipe() {
     swipeBg.style.padding = '0';
 
     // Listeners para os botões (precisam ser configurados após a criação)
-    // Serão chamados via onclick nos próprios botões, mas podemos adicionar listeners também
     document.querySelectorAll('.swipe-btn-excluir').forEach(btn => {
         btn.addEventListener('click', removerLinhaSwipe);
     });
@@ -118,6 +118,7 @@ function removerLinhaSwipe() {
         swipedRow.remove();
         const dados = coletarDadosDaTabela();
         salvarDados(dados);
+        atualizarPainelCompras(); // <-- Atualiza a lista de compras
         mostrarToast("Removido 🗑️");
         closeSwipe(swipedRow);
     });
