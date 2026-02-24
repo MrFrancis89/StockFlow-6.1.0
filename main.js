@@ -25,8 +25,8 @@ const releaseNotes = {
     "v6.1.1": `✨ **StockFlow Pro v6.1.1**
 
 - Correção: microfone agora é ativado corretamente no duplo toque da lupa.
-- Ajustes no temporizador do double tap para maior confiabilidade.
-- Pequenas melhorias de estabilidade.`,
+- Correção: lista de compras agora é atualizada ao marcar/desmarcar itens.
+- Ajustes no temporizador do double tap para maior confiabilidade.`,
     "v6.1.0": `✨ **StockFlow Pro v6.1.0**
 
 - Alternância entre calculadora e teclado nativo nos campos de quantidade.
@@ -157,6 +157,7 @@ function adicionarManual(salvarNoPadrao) {
     dados.push({ n: p, q: q, u: u, c: false, min: null, max: null });
     renderizarListaCompleta(dados);
     salvarDados(dados);
+    atualizarPainelCompras(); // <-- Atualiza a lista de compras
 
     if (salvarNoPadrao) {
         var favoritosUsuario = carregarMeus();
@@ -190,6 +191,7 @@ function removerDoPadrao() {
     });
     const dados = coletarDadosDaTabela();
     salvarDados(dados);
+    atualizarPainelCompras(); // <-- Atualiza a lista de compras
     atualizarDropdown();
     document.getElementById("novoProduto").value = "";
     document.getElementById("novoQtd").value = "";
@@ -499,11 +501,9 @@ function onDoubleTapTouchEnd(e) {
     const currentTime = new Date().getTime();
     if (lastTap && (currentTime - lastTap) < 300) {
         clearTimeout(tapTimeout);
-        // Abre o overlay se necessário
         if (document.getElementById('search-overlay').style.display !== 'block') {
             toggleSearch(null);
         }
-        // Aguarda um pequeno intervalo para o overlay aparecer
         setTimeout(() => {
             toggleMic('busca', null);
         }, 150);
@@ -605,6 +605,7 @@ function configurarEventListeners() {
         if (e.target.classList.contains('select-tabela')) {
             const dados = coletarDadosDaTabela();
             salvarDados(dados);
+            atualizarPainelCompras(); // <-- Atualiza a lista de compras (opcional, mas seguro)
         }
     });
 
@@ -687,7 +688,7 @@ function iniciarApp() {
         carregarListaPadrao();
     }
     atualizarDropdown();
-    atualizarPainelCompras();
+    atualizarPainelCompras(); // <-- Garante que a lista de compras seja exibida corretamente no início
     initSwipe();
     verificarAlertas();
     mostrarDicaSwipe();
