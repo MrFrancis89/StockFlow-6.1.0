@@ -9,7 +9,8 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ### Corrigido
 - **Microfone no duplo toque da lupa**: Agora o microfone é ativado corretamente ao dar duplo toque na lupa. Ajustes no temporizador garantem que o overlay de busca abra antes da ativação do microfone.
-- Pequenas melhorias de estabilidade e confiabilidade no reconhecimento de voz.
+- **Lista de compras**: Agora a lista de compras é atualizada imediatamente ao marcar/desmarcar itens, ao adicionar ou remover produtos, e ao editar via swipe. A função `atualizarPainelCompras` foi adicionada nos locais necessários.
+- Pequenas melhorias de estabilidade e confiabilidade.
 
 ---
 
